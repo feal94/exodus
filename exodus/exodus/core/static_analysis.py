@@ -16,6 +16,9 @@ from google_play_scraper import app as google_app
 from gpapi.googleplay import GooglePlayAPI, RequestError
 from minio.error import (ResponseError)
 
+from pylab import imshow, savefig, get_cmap
+from numpy import random
+
 from exodus_core.analysis.static_analysis import StaticAnalysis as CoreSA
 from exodus.core.storage import RemoteStorageHelper
 from trackers.models import Tracker
@@ -40,26 +43,31 @@ class StaticAnalysis(CoreSA):
         :param icon_name: source of the app (ex: google, fdroid)
         :return: icon phash if success, otherwise None
         """
-        with NamedTemporaryFile() as f:
+        if source != "apk":
+            f = NamedTemporaryFile()
             icon_path = self.save_icon(f.name)
+        
             if not icon_path:
                 logging.warning('Downloading icon from store website')
                 try:
                     get_icon_from_store(self.get_package(), source, f.name)
                     logging.debug('Icon downloaded from {}'.format(source))
                 except Exception as e:
-                    logging.error(e)
+                    f.close()
+                    logging.error("Exception when downloading image: " + e)
                     return None
-
-            try:
-                storage.put_file(f.name, icon_name)
-            except ResponseError as err:
-                logging.info(err)
-                return None
-
-            icon_phash = self.get_phash(f.name)
-
-            return icon_phash
+        else:
+            logging.error("Trying to open the file")
+            f = open("static/img/default.png")
+        try:
+            storage.put_file(f.name, icon_name)
+        except ResponseError as err:
+            logging.info("Responde error: " + err)
+            f.close()
+            return None
+        icon_phash = self.get_phash(f.name)
+        f.close()
+        return icon_phash
 
     def get_app_info(self):
         """
@@ -248,8 +256,13 @@ def download_google_apk(storage, handle, tmp_dir, apk_name, apk_tmp):
 def get_icon_from_store(handle, source, dest):
     if source == "fdroid":
         get_icon_from_fdroid(handle, dest)
-    else:
+    elif source == "gplay":
         get_icon_from_gplay(handle, dest)
+
+def get_default_icon(dest):
+    Z = random.random((512,512))
+    imshow(Z, cmap=get_cmap("Spectral"), interpolation='nearest')
+    savefig(dest)
 
 
 def get_icon_from_fdroid(handle, dest):

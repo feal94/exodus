@@ -75,7 +75,7 @@ class AnalysisRequest(models.Model):
     processed = models.BooleanField(default=False)
     in_error = models.BooleanField(default=False)
     report_id = models.CharField(max_length=200, default='')
-    apk = models.FileField(blank=False, validators=[validate_file_extension])
+    apk = models.FileField(blank=True,default=None, validators=[validate_file_extension])
     source = models.CharField(max_length=50, default='')
 
 

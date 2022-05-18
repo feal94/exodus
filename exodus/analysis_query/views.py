@@ -3,6 +3,9 @@ from __future__ import unicode_literals
 
 import random
 import string
+import pdb
+from celery.contrib import rdb
+
 
 from django.conf import settings
 from django.http import HttpResponseRedirect
@@ -12,6 +15,13 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import FormView, ListView
+from django.core.files.base import ContentFile
+
+from django.core.files.base import ContentFile
+from django.views.decorators.csrf import csrf_exempt
+
+
+
 
 from exodus.core.apk import StaticAnalysisParameters, start_static_analysis
 
@@ -23,11 +33,16 @@ def random_word(length):
     return ''.join(random.choice(string.ascii_lowercase) for _ in range(length))
 
 
+@csrf_exempt
 def upload_file(request):
-    if request.method == 'POST' and settings.ALLOW_APK_UPLOAD:
-        form = UploadRequestForm(request.POST, request.FILES)
+    path = request.GET.get("path")
+    if path is not None:
+        with open("static/" + path, "rb") as ifile:
+            content_file = ContentFile(ifile.read(), name=path)
+        form = UploadRequestForm(request.GET)
         if form.is_valid():
             req = form.save()
+            req.apk = content_file
             req.handle = 'from_upload'
             req.source = 'apk'
             req.bucket = str(random_word(60))
@@ -37,7 +52,6 @@ def upload_file(request):
             params = StaticAnalysisParameters(req)
             start_static_analysis.delay(params)
             return HttpResponseRedirect(reverse('analysis:wait', args=[req.id]))
-
     else:
         form = UploadRequestForm()
     return render(request, 'query_upload.html', {'form': form})

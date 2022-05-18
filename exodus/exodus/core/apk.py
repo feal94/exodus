@@ -3,6 +3,7 @@ from __future__ import absolute_import, unicode_literals
 
 import logging
 import os
+import pdb
 import tempfile
 
 from django.utils.translation import gettext_lazy as _
@@ -164,7 +165,6 @@ def start_static_analysis(params):
         if len(str(icon_phash)) < 16 and not request.apk:
             raise Exception('Unable to compute the icon perceptual hash')
     except Exception as e:
-        logging.info(e)
         msg = _('Unable to compute APK fingerprint')
         save_error(storage_helper, params, request, msg)
         return EXIT_CODE_COMPUTE_APK_FINGERPRINT_ERROR
